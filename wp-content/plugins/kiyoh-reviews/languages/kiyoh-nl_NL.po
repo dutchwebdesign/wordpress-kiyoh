@@ -1,0 +1,23 @@
+# Copyright (C) 2020 Automattic
+# This file is distributed under the same license as the WooCommerce plugin.
+msgid ""
+msgstr ""
+"Project-Id-Version: Kiyoh 0.0.1\n"
+"Report-Msgid-Bugs-To: https://www.dutchwebdesign.nl\n"
+"Language-Team: Dutchwebdesign\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"POT-Creation-Date: 2020-10-14T15:18:52-03:00\n"
+"PO-Revision-Date: 2020-10-22 12:11+0200\n"
+"X-Generator: Poedit 2.4.1\n"
+"X-Domain: kiyoh\n"
+"Last-Translator: \n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"Language: nl\n"
+
+msgid "%s reviews for %s"
+msgstr "%s beoordelingen voor %s"
+
+msgid "Rating %s out of %s, based on %s customer reviews"
+msgstr "Beoordeling %s uit %s, op basis van %s klantbeoordelingen"
