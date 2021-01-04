@@ -97,9 +97,7 @@ class Kiyoh
 
     public static function kiyoh_register_settings()
     {
-        add_option("kiyoh_reviews_enabled", "1");
-        add_option("kiyoh_api_key", "da9deacf-c4b7-43e9-88e1-b4e8334a6330");
-        add_option("kiyoh_location", "1063244");
+        add_option("kiyoh_reviews_enabled", "0");
         add_option("kiyoh_server", "https://www.kiyoh.com");
         add_option("kiyoh_order_state_trigger", "completed");
         add_option("kiyoh_delay", "0");
