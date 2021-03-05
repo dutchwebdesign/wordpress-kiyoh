@@ -30,6 +30,8 @@ class Kiyoh
         add_action('woocommerce_before_single_product', array('Kiyoh', 'before_product_load'));
         add_filter('comments_template', array('Kiyoh', 'comments_template_loader'), 99);
 
+        add_filter( 'woocommerce_locate_template', array('Kiyoh', 'locate_template'),  10, 2 );
+
         add_action('wp_ajax_sync_products', array('Kiyoh', 'kiyoh_sync_products'));
     }
 
@@ -72,13 +74,27 @@ class Kiyoh
         return null;
     }
 
+    public static function locate_template( $template, $template_name )
+    {
+        if($template_name == "single-product/review.php") {
+            $template = trailingslashit(KIYOH__PLUGIN_DIR) . 'templates/review.php';
+        }
+
+        return $template;
+    }
+
     public static function before_product_load()
     {
         global $product;
 
         $kiyoh_reviews = self::get_product_review_data($product->get_id());
         if ($kiyoh_reviews) {
+            $wc_review_count = $product->get_review_count();
+            $wc_rating_count = $product->get_rating_count();
+            $wc_avg_rating = $product->get_average_rating();
+
             $kiyoh_review_count = count($kiyoh_reviews);
+            $review_count = $wc_review_count + $kiyoh_review_count;
 
             $rating = [];
             foreach ($kiyoh_reviews as $kiyoh_review) {
@@ -87,11 +103,13 @@ class Kiyoh
                 }
             }
 
-            $avg_rating = (array_sum($rating) / count($rating)) / 2;
+            $wc_rating_sum = ($wc_avg_rating*2)*$wc_rating_count;
+
+            $avg_rating = ((array_sum($rating) + $wc_rating_sum) / (count($rating) + $wc_rating_count)) / 2;
             $product->set_rating_counts(count($rating));
             $product->set_average_rating($avg_rating);
 
-            $product->set_review_count($kiyoh_review_count);
+            $product->set_review_count($review_count);
         }
     }
 
@@ -195,10 +213,10 @@ class Kiyoh
 
             if (self::debug_enabled()) {
                 if ($response_code == 200) {
-                    error_log(sprintf("Kiyoh success(order %s): %s", $order_id, print_r($response_body, true)));
+                    self::kiyoh_error_log(sprintf("Kiyoh success(order %s): %s", $order_id, print_r($response_body, true)));
                 } else {
                     if (isset($response_body['detailedError'])) {
-                        error_log(
+                        self::kiyoh_error_log(
                             sprintf(
                                 "Kiyoh error(order %s): %s",
                                 $order_id,
@@ -207,7 +225,7 @@ class Kiyoh
                         );
                     } else {
                         if (is_wp_error($response)) {
-                            error_log(
+                            self::kiyoh_error_log(
                                 sprintf(
                                     "Kiyoh error(order %s): %s",
                                     $order_id,
@@ -215,14 +233,14 @@ class Kiyoh
                                 )
                             );
                         } else {
-                            error_log(sprintf("Kiyoh error(order %s): %s", $order_id, print_r($response_body, true)));
+                            self::kiyoh_error_log(sprintf("Kiyoh error(order %s): %s", $order_id, print_r($response_body, true)));
                         }
                     }
                 }
             }
         } catch (Exception $e) {
             if (self::debug_enabled()) {
-                error_log(sprintf("Kiyoh exception(order %s): %s", $order_id, print_r($response_body, true)));
+                self::kiyoh_error_log(sprintf("Kiyoh exception(order %s): %s", $order_id, print_r($response_body, true)));
             }
         }
 
@@ -265,19 +283,19 @@ class Kiyoh
                 $company_review_data = $response_body;
                 update_option("company_review_data", $company_review_data);
                 if (self::debug_enabled()) {
-                    error_log("Cron: Kiyoh company review data updated");
+                    self::kiyoh_error_log("Cron: Kiyoh company review data updated");
                 }
                 return $company_review_data;
             } elseif (self::debug_enabled()) {
                 if (isset($response_body['detailedError'])) {
-                    error_log(sprintf("Kiyoh error: %s", print_r($response_body['detailedError'], true)));
+                    self::kiyoh_error_log(sprintf("Kiyoh error: %s", print_r($response_body['detailedError'], true)));
                 } else {
-                    error_log(sprintf("Kiyoh error: %s", print_r($response_body, true)));
+                    self::kiyoh_error_log(sprintf("Kiyoh error: %s", print_r($response_body, true)));
                 }
             }
         } catch (Exception $e) {
             if (self::debug_enabled()) {
-                error_log(sprintf("Kiyoh exception: %s", print_r($response_body, true)));
+                self::kiyoh_error_log(sprintf("Kiyoh exception: %s", print_r($response_body, true)));
             }
         }
         return false;
@@ -297,7 +315,7 @@ class Kiyoh
     private static function fetch_product_review_data($product_id)
     {
         $http_args = array(
-            'body' => array('locationId' => get_option('kiyoh_location'), 'productCode' => $product_id),
+            'body' => array('locationId' => get_option('kiyoh_location'), 'productCode' => $product_id, 'limit' => 200),
             'headers' => array(
                 "Content-Type" => "application/json",
                 'X-Publication-Api-Token' => get_option('kiyoh_api_key'),
@@ -315,14 +333,14 @@ class Kiyoh
             update_post_meta($product_id, "kiyoh_reviews", $response_body['reviews']);
             update_post_meta($product_id, "kiyoh_reviews_timestamp", date('Y-m-d\TH:i:s'));
             if (self::debug_enabled()) {
-                error_log(sprintf("Cron: product(%s) reviews updated", $product_id));
+                self::kiyoh_error_log(sprintf("Cron: product(%s) reviews updated", $product_id));
             }
             return $response_body['reviews'];
         } elseif (self::debug_enabled()) {
             if (isset($response_body['detailedError'])) {
-                error_log(sprintf("Kiyoh error: %s", print_r($response_body['detailedError'], true)));
+                self::kiyoh_error_log(sprintf("Kiyoh error: %s", print_r($response_body['detailedError'], true)));
             } else {
-                error_log(sprintf("Kiyoh error: %s", print_r($response_body, true)));
+                self::kiyoh_error_log(sprintf("Kiyoh error: %s", print_r($response_body, true)));
             }
         }
 
@@ -376,28 +394,46 @@ class Kiyoh
                 $response_body = json_decode(wp_remote_retrieve_body($response), true);
 
                 if ($response_code == 200) {
-                    error_log("Cron: Kiyoh products synced");
+                    self::kiyoh_error_log("Cron: Kiyoh products synced");
                 } else {
                     if (isset($response_body['detailedError'])) {
-                        error_log(
+                        self::kiyoh_error_log(
                             sprintf("Kiyoh error products sync: %s", print_r($response_body['detailedError'], true))
                         );
                     } else {
                         if (is_wp_error($response)) {
-                            error_log(
+                            self::kiyoh_error_log(
                                 sprintf("Kiyoh products sync failed: %s", print_r($response->get_error_message(), true))
                             );
                         } else {
-                            error_log(sprintf("Kiyoh products sync failed: %s", print_r($response_body, true)));
+                            self::kiyoh_error_log(sprintf("Kiyoh products sync failed: %s", print_r($response_body, true)));
                         }
                     }
                 }
             }
         } catch (Exception $e) {
             if (self::debug_enabled()) {
-                error_log(sprintf("Kiyoh products sync failed: %s", print_r($response_body, true)));
+                self::kiyoh_error_log(sprintf("Kiyoh products sync failed: %s", print_r($response_body, true)));
             }
         }
+    }
+
+    public static function kiyoh_error_log($message)
+    {
+        $wp_upload_dir = wp_upload_dir( null, false );
+        $wp_upload_dir = $wp_upload_dir['basedir'];
+
+        if(is_array($message)) {
+            $message = json_encode($message);
+        }
+
+        $file = fopen($wp_upload_dir. "/kiyoh-debug.log","a+");
+        fwrite($file, "\n" . date('Y-m-d h:i:s') . " :: " . $message);
+        fclose($file);
+    }
+
+    public static function get_debug_log() {
+        return bloginfo(url)."/wp-content/uploads/kiyoh-debug.log";
     }
 
     public static function get_email_lang_codes()

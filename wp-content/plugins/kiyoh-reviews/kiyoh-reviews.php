@@ -2,8 +2,8 @@
 /*
 Plugin Name: Kiyoh reviews
 Plugin URI: https://dutchwebdesign.nl/
-Description: Proof of concept for project Kiyoh reviews
-Version: 0.0.1
+Description: Dutchwebdesign Kiyoh reviews plugin
+Version: 0.1.2
 Author: Dutchwebdesign
 Author URI: https://dutchwebdesign.nl/
 Text Domain: dwd

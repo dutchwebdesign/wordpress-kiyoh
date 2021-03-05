@@ -77,6 +77,7 @@
                         <option <?php echo (get_option('kiyoh_debug') == true) ? 'selected="selected"' : "" ?> value="1"><?php echo __("Enabled") ?></option>
                         <option <?php echo (get_option('kiyoh_debug') == false) ? 'selected="selected"' : "" ?> value="0"><?php echo __("Disabled") ?></option>
                     </select>
+                    <p><a href="<?php echo Kiyoh::get_debug_log() ?>" target="_blank"><?php echo __("Download debug log") ?></a></p>
                 </td>
             </tr>
             <tr>
